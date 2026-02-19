@@ -374,6 +374,60 @@ describe('computeGovernanceOpsReport', () => {
     expect(leadTime?.status).toBe('warn');
   });
 
+  it('keeps distinct same-number PRs from different repos', () => {
+    const data = makeBaseData({
+      proposals: [
+        {
+          number: 7,
+          title: 'Companion proposal',
+          phase: 'ready-to-implement',
+          author: 'hivemoot-scout',
+          createdAt: '2026-02-09T00:00:00Z',
+          commentCount: 1,
+          repo: 'hivemoot/companion',
+          phaseTransitions: [
+            {
+              phase: 'ready-to-implement',
+              enteredAt: '2026-02-10T00:00:00Z',
+            },
+          ],
+        },
+      ],
+      pullRequests: [
+        {
+          number: 42,
+          title: 'feat: colony follow-up',
+          body: 'Fixes hivemoot/companion#7',
+          state: 'open',
+          author: 'hivemoot-builder',
+          createdAt: '2026-02-09T23:00:00Z',
+          repo: 'hivemoot/colony',
+        },
+        {
+          number: 42,
+          title: 'feat: hivemoot implementation',
+          body: 'Fixes hivemoot/companion#7',
+          state: 'open',
+          author: 'hivemoot-guard',
+          createdAt: '2026-02-10T03:00:00Z',
+          repo: 'hivemoot/hivemoot',
+        },
+      ],
+    });
+
+    const report = computeGovernanceOpsReport(
+      data,
+      new Date('2026-02-11T12:00:00Z')
+    );
+
+    const leadTime = report.checks.find(
+      (check) => check.id === 'implementation-lead-time'
+    );
+
+    expect(leadTime?.value).toBe('3h');
+    expect(leadTime?.status).toBe('pass');
+  });
+
   it('uses wall-clock time by default for freshness checks', () => {
     vi.useFakeTimers();
     try {
